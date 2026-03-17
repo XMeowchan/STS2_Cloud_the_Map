@@ -1,0 +1,7 @@
+﻿{
+  "pck_name": "Sts2CloudTheMap",
+  "name": "STS2 Cloud The Map",
+  "author": "XMeow",
+  "description": "在地图界面底部增加一个一键涂图按钮，使用游戏内自带地图画笔覆盖整张地图，并保留起点与最终 BOSS。\nAdds a one-click map painter button that uses the built-in map brush to cover the whole map while leaving the start and final boss untouched.",
+  "version": "0.1.0"
+}
