@@ -10,14 +10,15 @@ namespace Sts2ModTemplate;
 public static class ModEntry
 {
     private static readonly object InitLock = new();
+    private static readonly string DefaultAssemblyName = Assembly.GetExecutingAssembly().GetName().Name ?? "Sts2ModTemplate";
 
     private static bool _initialized;
 
     private static Harmony? _harmony;
 
-    public static string ModId { get; private set; } = "Sts2ModTemplate";
+    public static string ModId { get; private set; } = DefaultAssemblyName;
 
-    public static string ModName { get; private set; } = "STS2 Mod Template";
+    public static string ModName { get; private set; } = DefaultAssemblyName;
 
     internal static string ModDirectory { get; private set; } = string.Empty;
 
@@ -33,7 +34,7 @@ public static class ModEntry
             }
 
             ModDirectory = ResolveModDirectory();
-            LoadManifest(Path.Combine(ModDirectory, "mod_manifest.json"));
+            LoadManifest(ResolveManifestPath());
             Config = ModConfig.Load(Path.Combine(ModDirectory, "config.json"));
 
             if (!Config.Enabled)
@@ -66,9 +67,9 @@ public static class ModEntry
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(manifest.PckName))
+            if (!string.IsNullOrWhiteSpace(manifest.ResolvedId))
             {
-                ModId = manifest.PckName.Trim();
+                ModId = manifest.ResolvedId.Trim();
             }
 
             if (!string.IsNullOrWhiteSpace(manifest.Name))
@@ -94,6 +95,17 @@ public static class ModEntry
         }
 
         return AppContext.BaseDirectory;
+    }
+
+    private static string ResolveManifestPath()
+    {
+        string externalManifestPath = Path.Combine(ModDirectory, $"{DefaultAssemblyName}.json");
+        if (File.Exists(externalManifestPath))
+        {
+            return externalManifestPath;
+        }
+
+        return Path.Combine(ModDirectory, "mod_manifest.json");
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()

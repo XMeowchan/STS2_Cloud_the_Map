@@ -9,6 +9,135 @@ function Resolve-ExistingPath {
     return (Resolve-Path -LiteralPath $Path).Path
 }
 
+function Get-ProjectManifestPath {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ProjectRoot
+    )
+
+    return (Join-Path $ProjectRoot "mod_manifest.json")
+}
+
+function Get-ProjectManifest {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ProjectRoot
+    )
+
+    $manifestPath = Get-ProjectManifestPath -ProjectRoot $ProjectRoot
+    if (-not (Test-Path -LiteralPath $manifestPath)) {
+        throw "Project manifest not found: $manifestPath"
+    }
+
+    return Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+}
+
+function Resolve-Sts2ModId {
+    param(
+        [Parameter(Mandatory)]
+        [psobject]$Manifest
+    )
+
+    $modId = [string]$Manifest.id
+    if ([string]::IsNullOrWhiteSpace($modId)) {
+        $modId = [string]$Manifest.pck_name
+    }
+
+    if ([string]::IsNullOrWhiteSpace($modId)) {
+        throw "mod_manifest.json is missing id."
+    }
+
+    return $modId.Trim()
+}
+
+function Get-Sts2ManifestFileName {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ModId
+    )
+
+    return ("{0}.json" -f $ModId.Trim())
+}
+
+function ConvertTo-Sts2ExternalManifest {
+    param(
+        [Parameter(Mandatory)]
+        [psobject]$Manifest
+    )
+
+    $modId = Resolve-Sts2ModId -Manifest $Manifest
+    $dependencies = @()
+    if ($null -ne $Manifest.dependencies) {
+        $dependencies = @(
+            $Manifest.dependencies |
+                ForEach-Object { [string]$_ } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        )
+    }
+
+    return [ordered]@{
+        id               = $modId
+        name             = [string]$Manifest.name
+        author           = [string]$Manifest.author
+        description      = [string]$Manifest.description
+        version          = [string]$Manifest.version
+        has_pck          = if ($null -ne $Manifest.has_pck) { [bool]$Manifest.has_pck } else { $true }
+        has_dll          = if ($null -ne $Manifest.has_dll) { [bool]$Manifest.has_dll } else { $true }
+        affects_gameplay = if ($null -ne $Manifest.affects_gameplay) { [bool]$Manifest.affects_gameplay } else { $true }
+        dependencies     = $dependencies
+    }
+}
+
+function Export-Sts2ExternalManifest {
+    param(
+        [Parameter(Mandatory)]
+        [psobject]$Manifest,
+        [Parameter(Mandatory)]
+        [string]$DestinationPath
+    )
+
+    $directory = Split-Path -Parent $DestinationPath
+    if (-not [string]::IsNullOrWhiteSpace($directory)) {
+        New-Item -ItemType Directory -Force -Path $directory | Out-Null
+    }
+
+    $normalizedManifest = ConvertTo-Sts2ExternalManifest -Manifest $Manifest
+    $json = $normalizedManifest | ConvertTo-Json -Depth 8
+    [System.IO.File]::WriteAllText($DestinationPath, $json + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($true))
+}
+
+function Sync-Sts2ModSupportFiles {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ProjectRoot,
+        [Parameter(Mandatory)]
+        [string]$DestinationDir
+    )
+
+    $manifest = Get-ProjectManifest -ProjectRoot $ProjectRoot
+    $modId = Resolve-Sts2ModId -Manifest $manifest
+
+    New-Item -ItemType Directory -Force -Path $DestinationDir | Out-Null
+    $manifestOutputPath = Join-Path $DestinationDir (Get-Sts2ManifestFileName -ModId $modId)
+    Export-Sts2ExternalManifest -Manifest $manifest -DestinationPath $manifestOutputPath
+
+    $legacyManifestPath = Join-Path $DestinationDir "mod_manifest.json"
+    if (Test-Path -LiteralPath $legacyManifestPath) {
+        Remove-Item -LiteralPath $legacyManifestPath -Force
+    }
+
+    $configPath = Join-Path $ProjectRoot "config.json"
+    if (Test-Path -LiteralPath $configPath) {
+        Copy-Item $configPath (Join-Path $DestinationDir "config.json") -Force
+    }
+
+    return [pscustomobject]@{
+        Manifest = $manifest
+        ModId = $modId
+        ManifestPath = $manifestOutputPath
+    }
+}
+
 function Get-SteamInstallPath {
     $registryKeys = @(
         "HKCU:\Software\Valve\Steam",

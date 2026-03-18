@@ -8,11 +8,8 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "Sts2InstallHelpers.ps1")
 
-$manifest = Get-Content -LiteralPath (Join-Path $projectRoot "mod_manifest.json") -Raw | ConvertFrom-Json
-$modId = [string]$manifest.pck_name
-if ([string]::IsNullOrWhiteSpace($modId)) {
-    throw "mod_manifest.json is missing pck_name."
-}
+$manifest = Get-ProjectManifest -ProjectRoot $projectRoot
+$modId = Resolve-Sts2ModId -Manifest $manifest
 
 $modName = [string]$manifest.name
 if ([string]::IsNullOrWhiteSpace($modName)) {
@@ -54,6 +51,8 @@ foreach ($artifactPath in @($dllPath, $pckPath)) {
         throw "Missing build artifact: $artifactPath"
     }
 }
+
+Sync-Sts2ModSupportFiles -ProjectRoot $projectRoot -DestinationDir $buildOut | Out-Null
 
 Invoke-AuthenticodeCodeSigning -Path $dllPath -Description $modName
 

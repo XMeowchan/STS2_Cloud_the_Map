@@ -5,6 +5,10 @@
 - `<ModId>-Setup-x.y.z.exe`
 - `<ModId>-portable-x.y.z.zip`
 
+并且会在安装目录 / 便携包里一并放入新的外置清单文件：
+
+- `<ModId>.json`
+
 其中：
 
 - 安装器适合普通玩家首次安装

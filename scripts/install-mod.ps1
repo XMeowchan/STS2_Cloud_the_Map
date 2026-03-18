@@ -9,8 +9,8 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($ModId)) {
-    $manifest = Get-Content -LiteralPath (Join-Path $projectRoot "mod_manifest.json") -Raw | ConvertFrom-Json
-    $ModId = [string]$manifest.pck_name
+    $manifest = Get-ProjectManifest -ProjectRoot $projectRoot
+    $ModId = Resolve-Sts2ModId -Manifest $manifest
 }
 
 if ([string]::IsNullOrWhiteSpace($ModId)) {
@@ -28,6 +28,10 @@ $targetModDir = Join-Path $modsRoot $ModId
 
 New-Item -ItemType Directory -Force -Path $targetModDir | Out-Null
 Copy-DirectoryContents -SourceDir $sourceModDir -DestinationDir $targetModDir
+$legacyManifestPath = Join-Path $targetModDir "mod_manifest.json"
+if (Test-Path -LiteralPath $legacyManifestPath) {
+    Remove-Item -LiteralPath $legacyManifestPath -Force
+}
 
 Write-Host "Detected game dir: $resolvedGameDir"
 Write-Host "Installed $ModId to $targetModDir"

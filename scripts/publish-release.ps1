@@ -10,9 +10,10 @@
 
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "Sts2InstallHelpers.ps1")
 
 function Get-Manifest {
-    return Get-Content -LiteralPath (Join-Path $projectRoot "mod_manifest.json") -Raw | ConvertFrom-Json
+    return Get-ProjectManifest -ProjectRoot $projectRoot
 }
 
 function New-ReleaseNotes {
@@ -41,6 +42,7 @@ $content = @"
 
 - Adds a bottom map button that uses the in-game brush to flood the whole map.
 - Keeps the start node and final boss visible while everything else is painted over.
+- Updates packaging for the latest STS2 mod manifest format with external `<mod_id>.json`.
 "@
 
     Set-Content -LiteralPath $OutputPath -Value $content -Encoding UTF8
@@ -317,13 +319,10 @@ function Publish-ReleaseAssets {
 
 $manifest = Get-Manifest
 $version = [string]$manifest.version
-$modId = [string]$manifest.pck_name
+$modId = Resolve-Sts2ModId -Manifest $manifest
 $modName = [string]$manifest.name
 if ([string]::IsNullOrWhiteSpace($version)) {
     throw "mod_manifest.json does not contain a version."
-}
-if ([string]::IsNullOrWhiteSpace($modId)) {
-    throw "mod_manifest.json does not contain pck_name."
 }
 if ([string]::IsNullOrWhiteSpace($modName)) {
     $modName = $modId

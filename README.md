@@ -26,13 +26,16 @@
 
 建议先编辑 `mod_manifest.json`：
 
-- `pck_name`: Mod ID，建议使用 ASCII、无空格
+- `id`: Mod ID，建议使用 ASCII、无空格
 - `name`: 展示名称
 - `author`: 作者名
 - `description`: 中英描述
 - `version`: 当前版本号
+- `has_pck` / `has_dll`: 声明是否携带 `.pck` / `.dll`
+- `affects_gameplay`: 是否参与联机玩法一致性校验
+- `dependencies`: 可选依赖 Mod ID 列表
 
-模板的构建脚本、部署脚本、安装器和发布脚本都会优先读取这里的 `pck_name` 和 `name`。
+模板的构建脚本、部署脚本、安装器和发布脚本都会优先读取这里的 `id` 和 `name`，并在最终产物中生成游戏当前要求的 `<mod_id>.json` 外置清单文件。
 
 ## 当前目录结构
 
@@ -60,7 +63,7 @@
 
 把要打包进 `.pck` 的资源放到 `pack_assets/` 下面。
 
-默认目录是 `pack_assets/Sts2ModTemplate/`。如果你改了 `mod_manifest.json` 里的 `pck_name`，打包脚本会优先尝试寻找同名目录；找不到时会退回到 `pack_assets/` 下的第一个子目录。
+默认目录是 `pack_assets/Sts2ModTemplate/`。如果你改了 `mod_manifest.json` 里的 `id`，打包脚本会优先尝试寻找同名目录；找不到时会退回到 `pack_assets/` 下的第一个子目录。
 
 ### 3. 调整配置
 

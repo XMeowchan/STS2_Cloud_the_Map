@@ -9,12 +9,9 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "Sts2InstallHelpers.ps1")
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$manifest = Get-Content -LiteralPath (Join-Path $projectRoot "mod_manifest.json") -Raw | ConvertFrom-Json
-$modId = [string]$manifest.pck_name
+$manifest = Get-ProjectManifest -ProjectRoot $projectRoot
+$modId = Resolve-Sts2ModId -Manifest $manifest
 $modName = [string]$manifest.name
-if ([string]::IsNullOrWhiteSpace($modId)) {
-    throw "mod_manifest.json is missing pck_name."
-}
 if ([string]::IsNullOrWhiteSpace($modName)) {
     $modName = $modId
 }
@@ -61,8 +58,7 @@ New-Item -ItemType Directory -Force -Path $stagedModDir | Out-Null
 Copy-Item (Join-Path $buildOut "$modId.dll") (Join-Path $stagedModDir "$modId.dll") -Force
 Copy-Item (Join-Path $buildOut "$modId.pck") (Join-Path $stagedModDir "$modId.pck") -Force
 Set-PckCompatibilityHeader -Path (Join-Path $stagedModDir "$modId.pck") -EngineMinorVersion 5
-Copy-Item (Join-Path $projectRoot "mod_manifest.json") (Join-Path $stagedModDir "mod_manifest.json") -Force
-Copy-Item (Join-Path $projectRoot "config.json") (Join-Path $stagedModDir "config.json") -Force
+Sync-Sts2ModSupportFiles -ProjectRoot $projectRoot -DestinationDir $stagedModDir | Out-Null
 
 $stagedDllPath = Join-Path $stagedModDir "$modId.dll"
 if ((Test-CodeSigningConfigured) -and (-not (Test-AuthenticodeSignatureValid -Path $stagedDllPath))) {
